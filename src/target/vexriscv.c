@@ -608,6 +608,7 @@ static int vexriscv_parse_cpu_file(struct command_context *cmd_ctx, struct targe
 	int done = 0;
 	yaml_parser_initialize(&parser);
 
+	LOG_INFO("Parsing cpuConfigFile %s", vexriscv->cpuConfigFile);
 	FILE *input = fopen(vexriscv->cpuConfigFile, "rb");
 	if(!input){
 		LOG_ERROR("cpuConfigFile %s not found", vexriscv->cpuConfigFile);
@@ -619,8 +620,10 @@ static int vexriscv_parse_cpu_file(struct command_context *cmd_ctx, struct targe
 	while (!done) {
 
 		/* Get the next event. */
-		if (!yaml_parser_scan(&parser, &token))
+		if (!yaml_parser_scan(&parser, &token)){
+			LOG_ERROR("Next event not found");
 			goto error;
+		}
 
 		switch(token.type){
 			case YAML_SCALAR_TOKEN:
@@ -671,8 +674,10 @@ static int vexriscv_init_target(struct command_context *cmd_ctx, struct target *
 
 	vexriscv->iBus = NULL;
 	vexriscv->dBus = NULL;
-	if(vexriscv_parse_cpu_file(cmd_ctx, target))
+	if(vexriscv_parse_cpu_file(cmd_ctx, target)){
+		LOG_ERROR("Parsing CPU file failed");
 		return ERROR_FAIL;
+	}
 	vexriscv->hardwareBreakpointUsed = malloc(sizeof(bool)*vexriscv->hardwareBreakpointsCount);
 	for(int i = 0;i < vexriscv->hardwareBreakpointsCount;i++) vexriscv->hardwareBreakpointUsed[i] = 0;
 
@@ -2089,7 +2094,10 @@ static int vexriscv_examine(struct target *target)
                     return ERROR_FAIL;
                 if(buffer[0] != 0x123 || buffer[1] != 0x456 || buffer[2] != 0xFFFFF000 || buffer[3] != 0xABCDE000){
                     LOG_ERROR("!!!");
-                    LOG_ERROR("Can't communicate with the CPU");
+                    LOG_ERROR("Can't communicate with the CPU: %" PRIx32, buffer[0]);
+                    LOG_ERROR("Can't communicate with the CPU: %" PRIx32, buffer[1]);
+                    LOG_ERROR("Can't communicate with the CPU: %" PRIx32, buffer[2]);
+                    LOG_ERROR("Can't communicate with the CPU: %" PRIx32, buffer[3]);
                     LOG_ERROR("!!!");
                     return ERROR_FAIL;
                 }
